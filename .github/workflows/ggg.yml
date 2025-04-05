@@ -1,0 +1,72 @@
+name: Push Setup Code
+
+on:
+  workflow_dispatch:
+
+jobs:
+  push-code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Create Frontend + Backend Structure
+        run: |
+          # FRONTEND SETUP
+          mkdir -p frontend
+          cd frontend
+          npm create vite@latest . -- --template react
+          npm install
+          npm install -D tailwindcss postcss autoprefixer
+          npx tailwindcss init -p
+
+          echo "module.exports = {
+            content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+            theme: { extend: {} },
+            plugins: [],
+          };" > tailwind.config.js
+
+          echo '@tailwind base;\n@tailwind components;\n@tailwind utilities;' > src/index.css
+
+          echo "import React from 'react'; import ReactDOM from 'react-dom/client';
+          import App from './App'; import './index.css';
+
+          ReactDOM.createRoot(document.getElementById('root')).render(
+            <React.StrictMode><App /></React.StrictMode>
+          );" > src/main.jsx
+
+          cd ..
+
+          # BACKEND SETUP
+          mkdir -p backend
+          cd backend
+          npm init -y
+          npm install express cors dotenv pg
+
+          echo "const express = require('express');
+          const cors = require('cors');
+          const app = express();
+          require('dotenv').config();
+
+          app.use(cors());
+          app.use(express.json());
+
+          app.get('/', (req, res) => res.send('API Running'));
+
+          const PORT = process.env.PORT || 4000;
+          app.listen(PORT, () => console.log('Server running on port', PORT));" > index.js
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b setup
+          git add .
+          git commit -m "Initial project scaffolding: frontend + backend"
+          git push origin setup --force
